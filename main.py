@@ -4,7 +4,9 @@ import datetime
 import sys
 
 # Mode check
-IS_STREAMLIT = "streamlit" in sys.argv[0].lower()
+MODE = os.getenv("MODE", "streamlit").lower()
+IS_STREAMLIT = MODE == "streamlit"
+
 
 # --- Import libraries based on mode ---
 if IS_STREAMLIT:
