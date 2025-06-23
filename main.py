@@ -1,14 +1,14 @@
+# main.py
 import os
 import json
 import datetime
 import sys
 
-# Mode check
+# MODE: streamlit or chainlit
 MODE = os.getenv("MODE", "streamlit").lower()
 IS_STREAMLIT = MODE == "streamlit"
 
-
-# --- Import libraries based on mode ---
+# --- Conditional imports ---
 if IS_STREAMLIT:
     import streamlit as st
 else:
@@ -16,7 +16,7 @@ else:
 
 from litellm import completion
 
-# --- API key load ---
+# --- Load API Key ---
 if IS_STREAMLIT:
     gemini_api_key = st.secrets["GEMINI_API_KEY"]
 else:
@@ -24,11 +24,10 @@ else:
     load_dotenv()
     gemini_api_key = os.getenv("GEMINI_API_KEY")
 
-# --- Validate API key ---
 if not gemini_api_key:
-    raise ValueError("❌ GEMINI_API_KEY not found.")
+    raise ValueError("\u274c GEMINI_API_KEY not found.")
 
-# --- Shared Gemini response function ---
+# --- Shared Response Function ---
 def get_gemini_response(history, message_text):
     history.append({"role": "user", "content": message_text})
     response = completion(
@@ -40,9 +39,9 @@ def get_gemini_response(history, message_text):
     history.append({"role": "assistant", "content": reply})
     return reply, history
 
-# =========================
-# 🔵 CHAINLIT MODE
-# =========================
+# =============================
+# CHAINLIT MODE
+# =============================
 if not IS_STREAMLIT:
     @cl.on_chat_start
     async def start():
@@ -51,7 +50,7 @@ if not IS_STREAMLIT:
                 cl.user_session.set("chat_history", json.load(f))
         else:
             cl.user_session.set("chat_history", [])
-        await cl.Message(content="🤖 Welcome to Imran AI (Chainlit)!").send()
+        await cl.Message(content="🤖 Welcome to Imran AI (Chainlit)! Ask me anything.").send()
 
     @cl.on_message
     async def main(message: cl.Message):
@@ -65,21 +64,42 @@ if not IS_STREAMLIT:
             await msg.update()
             cl.user_session.set("chat_history", updated_history)
         except Exception as e:
-            msg.content = f"❌ Error: {str(e)}"
+            msg.content = f"\u274c Error: {str(e)}"
             await msg.update()
 
     @cl.on_chat_end
-    async def on_chat_end():
+    async def end():
         history = cl.user_session.get("chat_history") or []
         filename = f"chat_history_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(filename, "w") as f:
             json.dump(history, f, indent=2)
 
-# =========================
-# 🟢 STREAMLIT MODE
-# =========================
+# =============================
+# STREAMLIT MODE
+# =============================
 if IS_STREAMLIT:
     st.set_page_config(page_title="Imran AI", page_icon="🤖")
+
+    # Custom Dark Theme Styling
+    st.markdown("""
+        <style>
+        body {
+            background-color: #0e1117;
+            color: white;
+        }
+        .stChatMessage, .stTextInput, .stTextArea {
+            background-color: #1c1f26;
+            color: white;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .stButton>button {
+            background-color: #4a90e2;
+            color: white;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.title("🤖 Imran AI Assistant")
 
     if "history" not in st.session_state:
@@ -94,4 +114,4 @@ if IS_STREAMLIT:
                 st.chat_message("user").markdown(user_input)
                 st.chat_message("assistant").markdown(reply)
             except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+                st.error(f"\u274c Error: {str(e)}")
